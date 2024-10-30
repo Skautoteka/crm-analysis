@@ -1,7 +1,9 @@
 from enum import Enum
 from functools import lru_cache
-from typing import Annotated, Optional
+from io import StringIO
+from typing import Annotated
 
+import polars as pl
 import requests
 from fastapi import APIRouter, Depends, FastAPI, responses
 from pydantic import BaseModel
@@ -19,19 +21,26 @@ class StatusEnum(str, Enum):
     completed = "COMPLETED"
 
 
+class PositionEnum(str, Enum):
+    forward = "FORWARD"
+    defense = "DEFENSE"
+    winger = "WINGER"
+
+
 class Player(BaseModel):
-    id: Optional[str]
-    firstName: Optional[str]
-    lastName: Optional[str]
-    sex: Optional[str]
-    age: Optional[int]
+    id: str | None = None
+    firstName: str | None = None
+    lastName: str | None = None
+    sex: str | None = None
+    age: int | None = None
+    position: PositionEnum | None = None
 
 
 class Report(BaseModel):
-    id: Optional[str]
-    name: Optional[str]
-    status: Optional[StatusEnum]
-    player: Optional[Player]
+    id: str | None = None
+    name: str | None = None
+    status: StatusEnum | None = None
+    player: Player | None = None
 
 
 app = FastAPI()
@@ -53,8 +62,23 @@ def filter_reports(
             "detail": str(err),
         }
 
+    df = pl.read_json(StringIO(response.text))
+
+    query = True
+    for k, v in report.dict().items():
+        if k == "player":
+            continue
+        if v is None:
+            continue
+        query &= pl.col(k) == v
+    if report.player is not None:
+        for k, v in report.player.dict().items():
+            if v is None:
+                continue
+            query &= pl.col("player").struct.field(k) == v
+
     return responses.Response(
-        content=response.text,
+        content=df.filter(query).write_json(),
         media_type="application/json",
     )
 
