@@ -1,7 +1,16 @@
 from enum import Enum
+from functools import lru_cache
+from typing import Annotated
 
-from fastapi import APIRouter, FastAPI
+from fastapi import APIRouter, Depends, FastAPI
 from pydantic import BaseModel
+
+from .config import Settings
+
+
+@lru_cache
+def get_settings():
+    return Settings()
 
 
 class StatusEnum(str, Enum):
@@ -29,7 +38,10 @@ router = APIRouter()
 
 
 @router.post("/filter-reports/")
-def filter_reports(report: Report):
+def filter_reports(
+    settings: Annotated[Settings, Depends(get_settings)],
+    report: Report,
+):
     return {}
 
 
