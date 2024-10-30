@@ -62,17 +62,23 @@ def filter_reports(
             "detail": str(err),
         }
 
+    if report is None:
+        return responses.Response(
+            content=response.text,
+            media_type="application/json",
+        )
+
     df = pl.read_json(StringIO(response.text))
 
     query = True
-    for k, v in report.dict().items():
+    for k, v in report.model_dump().items():
         if k == "player":
             continue
         if v is None:
             continue
         query &= pl.col(k) == v
     if report.player is not None:
-        for k, v in report.player.dict().items():
+        for k, v in report.player.model_dump().items():
             if v is None:
                 continue
             query &= pl.col("player").struct.field(k) == v
