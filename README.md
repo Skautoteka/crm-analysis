@@ -1,6 +1,6 @@
 # Installing
 
-Install with `uv pip install -r pyproject.toml`. If you need development or testing dependencies
+First install uv. Then create virtual environment with `uv venv`. Install with `uv pip install -r pyproject.toml`. If you need development or testing dependencies
 install them with (accordingly): `uv pip install -r pyproject.toml --extra development` and 
 `uv pip install -r pyproject.toml --extra testing`.
 
