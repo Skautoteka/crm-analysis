@@ -102,7 +102,7 @@ def test_analyze_filters():
             "/analyze/",
             json={},
         )
-        assert response.status_code == 400
+        assert response.status_code == 422
 
         response = client.post(
             "/analyze/",
