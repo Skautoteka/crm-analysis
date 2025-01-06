@@ -1,7 +1,7 @@
 from enum import Enum
 from functools import lru_cache
 from io import StringIO
-from typing import Annotated
+from typing import Annotated, List, Optional
 
 import polars as pl
 import requests
@@ -25,6 +25,37 @@ class PositionEnum(str, Enum):
     forward = "FORWARD"
     defense = "DEFENSE"
     winger = "WINGER"
+
+
+class TypeEnum(str, Enum):
+    note = "note"
+    report = "report"
+
+
+class KeyEnum(str, Enum):
+    team = "team"
+    name = "name"
+    player_number = "player_number"
+    reflex = "reflex"
+    speed = "speed"
+    interceptions = "interceptions"
+    finishing = "finishing"
+    stamina = "stamina"
+    heading = "heading"
+    physical_strength = "physical_strength"
+
+
+class PredicateEnum(str, Enum):
+    lt = "lt"
+    lte = "lte"
+    gt = "gt"
+    gte = "gte"
+    eq = "eq"
+    avg_lt = "lt"
+    avg_lte = "lte"
+    avg_gt = "gt"
+    avg_gte = "gte"
+    avg_eq = "eq"
 
 
 class Player(BaseModel):
@@ -54,6 +85,17 @@ class Trait(BaseModel):
 class Mean(BaseModel):
     report: Report | None = None
     trait: Trait
+
+
+class Filter(BaseModel):
+    key: KeyEnum
+    predicate: PredicateEnum
+    value: str
+
+
+class AnalyzeRequest(BaseModel):
+    type: TypeEnum
+    filters: Optional[List[Filter]] = None
 
 
 app = FastAPI()
@@ -147,6 +189,41 @@ def mean(
         .write_json()
     )
 
+    return responses.Response(
+        content=content,
+        media_type="application/json",
+    )
+
+
+@router.post("/analyze/")
+def analyze(
+    settings: Annotated[Settings, Depends(get_settings)],
+    analyze_request: AnalyzeRequest,
+):
+    if analyze_request.type == TypeEnum.report:
+        try:
+            response = requests.get(
+                f"{settings.backend_url}report/all-detailed",
+                timeout=0.1,
+            )
+        except (requests.ConnectionError, requests.Timeout) as err:
+            return {
+                "detail": str(err),
+            }
+    else:
+        try:
+            response = requests.get(
+                f"{settings.backend_url}note/all",
+                timeout=0.1,
+            )
+        except (requests.ConnectionError, requests.Timeout) as err:
+            return {
+                "detail": str(err),
+            }
+
+    _ = pl.read_json(StringIO(response.text))
+
+    content = ""
     return responses.Response(
         content=content,
         media_type="application/json",
