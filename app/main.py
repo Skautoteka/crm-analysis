@@ -34,8 +34,13 @@ class TypeEnum(str, Enum):
 
 class KeyEnum(str, Enum):
     team = "team"
+    first_name = "first_name"
+    last_name = "last_name"
     name = "name"
     player_number = "player_number"
+    position = "position"
+    sex = "sex"
+    report_name = "report_name"
     reflex = "reflex"
     speed = "speed"
     interceptions = "interceptions"
