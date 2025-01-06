@@ -1,3 +1,5 @@
+import json
+import uuid
 from enum import Enum
 from functools import lru_cache
 from io import StringIO
@@ -228,9 +230,17 @@ def analyze(
 
     _ = pl.read_json(StringIO(response.text))
 
-    content = ""
+    content = [
+        {
+            "uuid": str(uuid.uuid4()),
+            "related": [],
+            "values": [],
+            "playerId": "",
+        },
+    ]
+
     return responses.Response(
-        content=content,
+        content=json.dumps(content),
         media_type="application/json",
     )
 

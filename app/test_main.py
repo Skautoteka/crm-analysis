@@ -91,6 +91,186 @@ def test_filter_reports():
         assert response.text == damian_report
 
 
+def test_analyze_filters():
+    with mock.patch("requests.get") as mocked_get:
+        get = mock.MagicMock()
+        get.text = example_reports
+        get.status_code = 200
+        mocked_get.return_value = get
+
+        response = client.post(
+            "/analyze/",
+            json={},
+        )
+        assert response.status_code == 400
+
+        response = client.post(
+            "/analyze/",
+            json={
+                "type": "report",
+            },
+        )
+        assert response.status_code == 200
+        answer = response.json()
+        players = set(report["playerId"] for report in answer)
+        assert players == {
+            "4b4b4076-c6aa-4601-841e-ba51f7e60c32",
+            "bfaee0f7-2e44-4182-a78f-a03253eee601",
+            "18228bad-4d09-4773-8aeb-73938a2456c1",
+        }
+
+        response = client.post(
+            "/analyze/",
+            json={
+                "type": "report",
+                "filters": [],
+            },
+        )
+        assert response.status_code == 200
+        answer = response.json()
+        players = set(report["playerId"] for report in answer)
+        assert players == {
+            "4b4b4076-c6aa-4601-841e-ba51f7e60c32",
+            "bfaee0f7-2e44-4182-a78f-a03253eee601",
+            "18228bad-4d09-4773-8aeb-73938a2456c1",
+        }
+
+        response = client.post(
+            "/analyze/",
+            json={
+                "type": "report",
+                "filters": [
+                    {
+                        "key": "position",
+                        "predicate": "eq",
+                        "value": "WINGER",
+                    }
+                ],
+            },
+        )
+        assert response.status_code == 200
+        answer = response.json()
+        players = set(report["playerId"] for report in answer)
+        assert players == {
+            "4b4b4076-c6aa-4601-841e-ba51f7e60c32",
+        }
+
+        response = client.post(
+            "/analyze/",
+            json={
+                "type": "report",
+                "filters": [
+                    {
+                        "key": "sex",
+                        "predicate": "eq",
+                        "value": "MALE",
+                    },
+                ],
+            },
+        )
+        assert response.status_code == 200
+        answer = response.json()
+        players = set(report["playerId"] for report in answer)
+        assert players == {
+            "4b4b4076-c6aa-4601-841e-ba51f7e60c32",
+            "bfaee0f7-2e44-4182-a78f-a03253eee601",
+            "18228bad-4d09-4773-8aeb-73938a2456c1",
+        }
+
+        response = client.post(
+            "/analyze/",
+            json={
+                "type": "report",
+                "filters": [
+                    {
+                        "key": "sex",
+                        "predicate": "eq",
+                        "value": "FEMALE",
+                    },
+                ],
+            },
+        )
+        assert response.status_code == 200
+        answer = response.json()
+        players = set(report["playerId"] for report in answer)
+        assert players == set([])
+
+        response = client.post(
+            "/analyze/",
+            json={
+                "type": "report",
+                "filters": [
+                    {
+                        "key": "report_name",
+                        "predicate": "eq",
+                        "value": "Raport #1",
+                    },
+                ],
+            },
+        )
+        assert response.status_code == 200
+        answer = response.json()
+        players = set(report["playerId"] for report in answer)
+        assert players == {
+            "4b4b4076-c6aa-4601-841e-ba51f7e60c32",
+        }
+
+        response = client.post(
+            "/analyze/",
+            json={
+                "type": "report",
+                "filters": [
+                    {
+                        "key": "report_name",
+                        "predicate": "eq",
+                        "value": "Raport #1",
+                    },
+                    {
+                        "key": "sex",
+                        "predicate": "eq",
+                        "value": "MALE",
+                    },
+                ],
+            },
+        )
+        assert response.status_code == 200
+        answer = response.json()
+        players = set(report["playerId"] for report in answer)
+        assert players == {
+            "4b4b4076-c6aa-4601-841e-ba51f7e60c32",
+        }
+
+        response = client.post(
+            "/analyze/",
+            json={
+                "type": "report",
+                "filters": [
+                    {
+                        "key": "sex",
+                        "predicate": "eq",
+                        "value": "MALE",
+                    },
+                    {
+                        "key": "first_name",
+                        "predicate": "eq",
+                        "value": "Damian",
+                    },
+                    {
+                        "key": "last_name",
+                        "predicate": "eq",
+                        "value": "Kowalski",
+                    },
+                ],
+            },
+        )
+        assert response.status_code == 200
+        answer = response.json()
+        players = set(report["playerId"] for report in answer)
+        assert players == {
+            "4b4b4076-c6aa-4601-841e-ba51f7e60c32",
+        }
+
+
 example_reports_to_sort = """
 [
     {
