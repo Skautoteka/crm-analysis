@@ -228,7 +228,18 @@ def analyze(
                 "detail": str(err),
             }
 
-    _ = pl.read_json(StringIO(response.text))
+    df = pl.read_json(StringIO(response.text))
+
+    if analyze_request.filters is None or analyze_request.filters == []:
+        content = pl.Series(
+            df.group_by("playerId")
+            .agg(pl.col("id").alias("related"))
+            .with_columns(values=[])
+        ).to_list()
+        return responses.Response(
+            content=json.dumps(content),
+            media_type="application/json",
+        )
 
     content = [
         {
