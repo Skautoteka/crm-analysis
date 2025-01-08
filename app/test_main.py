@@ -251,12 +251,12 @@ def test_analyze_filters():
                         "value": "MALE",
                     },
                     {
-                        "key": "first_name",
+                        "key": "firstName",
                         "predicate": "eq",
                         "value": "Damian",
                     },
                     {
-                        "key": "last_name",
+                        "key": "lastName",
                         "predicate": "eq",
                         "value": "Kowalski",
                     },

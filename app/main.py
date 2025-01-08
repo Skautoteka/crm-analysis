@@ -1,5 +1,5 @@
 import json
-import uuid
+import operator
 from enum import Enum
 from functools import lru_cache
 from io import StringIO
@@ -36,8 +36,8 @@ class TypeEnum(str, Enum):
 
 class KeyEnum(str, Enum):
     team = "team"
-    first_name = "first_name"
-    last_name = "last_name"
+    first_name = "firstName"
+    last_name = "lastName"
     name = "name"
     player_number = "player_number"
     position = "position"
@@ -54,15 +54,17 @@ class KeyEnum(str, Enum):
 
 class PredicateEnum(str, Enum):
     lt = "lt"
-    lte = "lte"
+    le = "le"
     gt = "gt"
-    gte = "gte"
+    ge = "ge"
     eq = "eq"
-    avg_lt = "lt"
-    avg_lte = "lte"
-    avg_gt = "gt"
-    avg_gte = "gte"
-    avg_eq = "eq"
+    ne = "ne"
+    avg_lt = "avg_lt"
+    avg_le = "avg_le"
+    avg_gt = "avg_gt"
+    avg_ge = "avg_ge"
+    avg_eq = "avg_eq"
+    avg_ne = "avg_ne"
 
 
 class Player(BaseModel):
@@ -234,21 +236,55 @@ def analyze(
         content = pl.Series(
             df.group_by("playerId")
             .agg(pl.col("id").alias("related"))
-            .with_columns(values=[])
+            .with_columns(
+                values=[],
+            )
         ).to_list()
         return responses.Response(
             content=json.dumps(content),
             media_type="application/json",
         )
 
-    content = [
-        {
-            "uuid": str(uuid.uuid4()),
-            "related": [],
-            "values": [],
-            "playerId": "",
-        },
-    ]
+    query = True
+    for request_filter in analyze_request.filters:
+        if request_filter.predicate in [
+            PredicateEnum.ge,
+            PredicateEnum.gt,
+            PredicateEnum.le,
+            PredicateEnum.lt,
+            PredicateEnum.eq,
+            PredicateEnum.ne,
+        ]:
+            if request_filter.key in [
+                KeyEnum.position,
+                KeyEnum.name,
+                KeyEnum.first_name,
+                KeyEnum.last_name,
+                KeyEnum.position,
+                KeyEnum.sex,
+            ]:
+                query &= getattr(operator, request_filter.predicate)(
+                    pl.col("player").struct.field(request_filter.key),
+                    request_filter.value,
+                )
+            elif request_filter.key == KeyEnum.report_name:
+                query &= getattr(operator, request_filter.predicate)(
+                    pl.col("name"), request_filter.value
+                )
+            else:
+                query &= getattr(operator, request_filter.predicate)(
+                    pl.col(request_filter.key), request_filter.value
+                )
+            # TODO: errors
+    df.filter(query)
+    content = pl.Series(
+        df.filter(query)
+        .group_by("playerId")
+        .agg(pl.col("id").alias("related"))
+        .with_columns(
+            values=[],
+        )
+    ).to_list()
 
     return responses.Response(
         content=json.dumps(content),
