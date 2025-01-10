@@ -256,11 +256,9 @@ def analyze(
             PredicateEnum.ne,
         ]:
             if request_filter.key in [
-                KeyEnum.position,
                 KeyEnum.name,
                 KeyEnum.first_name,
                 KeyEnum.last_name,
-                KeyEnum.position,
                 KeyEnum.sex,
             ]:
                 query &= getattr(operator, request_filter.predicate)(
@@ -270,6 +268,11 @@ def analyze(
             elif request_filter.key == KeyEnum.report_name:
                 query &= getattr(operator, request_filter.predicate)(
                     pl.col("name"), request_filter.value
+                )
+            elif request_filter.key == KeyEnum.position:  # TODO
+                query &= getattr(operator, request_filter.predicate)(
+                    pl.col("player").struct.field("positionId"),
+                    request_filter.value,
                 )
             else:
                 query &= getattr(operator, request_filter.predicate)(
