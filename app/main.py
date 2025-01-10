@@ -232,62 +232,178 @@ def analyze(
 
     df = pl.read_json(StringIO(response.text))
 
-    if analyze_request.filters is None or analyze_request.filters == []:
-        content = pl.Series(
-            df.group_by("playerId")
-            .agg(pl.col("id").alias("related"))
-            .with_columns(
-                values=[],
-            )
-        ).to_list()
-        return responses.Response(
-            content=json.dumps(content),
-            media_type="application/json",
-        )
-
+    # Find reports matching filters
     query = True
-    for request_filter in analyze_request.filters:
-        if request_filter.predicate in [
-            PredicateEnum.ge,
-            PredicateEnum.gt,
-            PredicateEnum.le,
-            PredicateEnum.lt,
-            PredicateEnum.eq,
-            PredicateEnum.ne,
-        ]:
-            if request_filter.key in [
-                KeyEnum.name,
-                KeyEnum.first_name,
-                KeyEnum.last_name,
-                KeyEnum.sex,
+    if analyze_request.filters is not None:
+        for request_filter in analyze_request.filters:
+            if request_filter.predicate in [
+                PredicateEnum.ge,
+                PredicateEnum.gt,
+                PredicateEnum.le,
+                PredicateEnum.lt,
+                PredicateEnum.eq,
+                PredicateEnum.ne,
             ]:
-                query &= getattr(operator, request_filter.predicate)(
-                    pl.col("player").struct.field(request_filter.key),
-                    request_filter.value,
+                if request_filter.key in [
+                    KeyEnum.name,
+                    KeyEnum.first_name,
+                    KeyEnum.last_name,
+                    KeyEnum.sex,
+                ]:
+                    query &= getattr(operator, request_filter.predicate)(
+                        pl.col("player").struct.field(request_filter.key),
+                        request_filter.value,
+                    )
+                elif request_filter.key == KeyEnum.report_name:
+                    query &= getattr(operator, request_filter.predicate)(
+                        pl.col("name"), request_filter.value
+                    )
+                elif request_filter.key == KeyEnum.position:  # TODO
+                    query &= getattr(operator, request_filter.predicate)(
+                        pl.col("player").struct.field("positionId"),
+                        request_filter.value,
+                    )
+                elif request_filter.key in [
+                    KeyEnum.reflex,
+                    KeyEnum.speed,
+                    KeyEnum.interceptions,
+                    KeyEnum.finishing,
+                    KeyEnum.stamina,
+                    KeyEnum.heading,
+                    KeyEnum.physical_strength,
+                ]:
+                    query &= (
+                        pl.col("traits").struct.field("traitId")
+                        == request_filter.key.upper()
+                    ) & (
+                        getattr(operator, request_filter.predicate)(
+                            pl.col("traits").struct.field("value"),
+                            int(request_filter.value),
+                        )
+                    )
+                else:
+                    query &= getattr(operator, request_filter.predicate)(
+                        pl.col(request_filter.key), request_filter.value
+                    )
+                # TODO: errors
+            elif request_filter.predicate in [
+                PredicateEnum.avg_ge,
+                PredicateEnum.avg_gt,
+                PredicateEnum.avg_le,
+                PredicateEnum.avg_lt,
+                PredicateEnum.avg_eq,
+                PredicateEnum.avg_ne,
+            ]:
+                continue
+    reports = df.filter(query).select("id")
+    ids = set(reports.to_dict()["id"])
+    if analyze_request.filters is not None:
+        for request_filter in analyze_request.filters:
+            if request_filter.predicate not in [
+                PredicateEnum.avg_ge,
+                PredicateEnum.avg_gt,
+                PredicateEnum.avg_le,
+                PredicateEnum.avg_lt,
+                PredicateEnum.avg_eq,
+                PredicateEnum.avg_ne,
+            ]:
+                continue
+            ids &= set(
+                df.filter(pl.col("id").is_in(reports))
+                .explode("traits")
+                .filter(
+                    pl.col("traits").struct.field("traitId")
+                    == request_filter.key.upper()
                 )
-            elif request_filter.key == KeyEnum.report_name:
-                query &= getattr(operator, request_filter.predicate)(
-                    pl.col("name"), request_filter.value
+                .group_by("playerId")
+                .agg(pl.col("traits").struct.field("value").mean(), "id")
+                .filter(
+                    getattr(
+                        operator,
+                        request_filter.predicate[
+                            request_filter.predicate.find("_") + 1 :
+                        ],
+                    )(
+                        pl.col("value"),
+                        int(request_filter.value),
+                    )
                 )
-            elif request_filter.key == KeyEnum.position:  # TODO
-                query &= getattr(operator, request_filter.predicate)(
-                    pl.col("player").struct.field("positionId"),
-                    request_filter.value,
-                )
-            else:
-                query &= getattr(operator, request_filter.predicate)(
-                    pl.col(request_filter.key), request_filter.value
-                )
-            # TODO: errors
-    df.filter(query)
+                .explode("id")
+                .select("id")
+                .to_dict()["id"]
+            )
+
+    # Construct content from reports/notes matching filters
     content = pl.Series(
-        df.filter(query)
+        df.filter(pl.col("id").is_in(ids))
         .group_by("playerId")
         .agg(pl.col("id").alias("related"))
-        .with_columns(
-            values=[],
-        )
+        .with_columns(values=[])
     ).to_list()
+    for key in [
+        "REFLEX",
+        "SPEED",
+        "INTERCEPTIONS",
+        "FINISHING",
+        "STAMINA",
+        "HEADING",
+        "PHYSICAL_STRENGTH",
+    ]:
+        avg = pl.Series(
+            df.explode("traits")
+            .filter(
+                (pl.col("id").is_in(reports))
+                & (pl.col("traits").struct.field("traitId") == key)
+            )
+            .group_by("playerId")
+            .agg(
+                pl.col("traits").struct.field("value").mean().alias("average")
+            )
+        ).to_list()
+        for i, content_player in enumerate(content):
+            for player in avg:
+                if content_player["playerId"] != player["playerId"]:
+                    continue
+                content[i]["values"].append(
+                    {"name": key, "average": player["average"]}
+                )
+        latest_times = pl.Series(
+            df.explode("traits")
+            .filter(
+                (pl.col("id").is_in(reports))
+                & (pl.col("traits").struct.field("traitId") == key)
+            )
+            .group_by("playerId")
+            .agg(
+                pl.col("traits")
+                .struct.field("updatedAt")
+                .sort(descending=True)
+                .first()
+            )
+        ).to_list()
+        for player in latest_times:
+            latest_value = pl.Series(
+                df.explode("traits")
+                .filter(
+                    (pl.col("playerId") == player["playerId"])
+                    & (pl.col("traits").struct.field("traitId") == key)
+                    & (
+                        pl.col("traits").struct.field("updatedAt")
+                        == player["updatedAt"]
+                    )
+                )
+                .select(pl.col("traits").struct.field("value"))
+            ).to_list()[0]
+            for i, content_player in enumerate(content):
+                if content_player["playerId"] != player["playerId"]:
+                    continue
+                for j, value in enumerate(content[i]["values"]):
+                    if value["name"] != key:
+                        continue
+                    content[i]["values"][j].update(
+                        {"latestValue": latest_value}
+                    )
+    # TODO uuid
 
     return responses.Response(
         content=json.dumps(content),
