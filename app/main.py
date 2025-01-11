@@ -7,7 +7,7 @@ from typing import Annotated, List, Optional
 
 import polars as pl
 import requests
-from fastapi import APIRouter, Depends, FastAPI, responses
+from fastapi import APIRouter, Depends, FastAPI, HTTPException, responses
 from pydantic import BaseModel
 
 from .config import Settings
@@ -216,9 +216,7 @@ def analyze(
                 timeout=0.1,
             )
         except (requests.ConnectionError, requests.Timeout) as err:
-            return {
-                "detail": str(err),
-            }
+            raise HTTPException(status_code=502, detail=str(err)) from err
     else:
         try:
             response = requests.get(
@@ -226,9 +224,7 @@ def analyze(
                 timeout=0.1,
             )
         except (requests.ConnectionError, requests.Timeout) as err:
-            return {
-                "detail": str(err),
-            }
+            raise HTTPException(status_code=502, detail=str(err)) from err
 
     df = pl.read_json(StringIO(response.text))
 
