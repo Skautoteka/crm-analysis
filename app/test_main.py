@@ -296,6 +296,91 @@ example_reports = """[
 #     '"updatedAt":"2024-10-30T07:46:03.000Z"}}]'
 # )
 
+example_notes = """
+[
+    {
+        "id": "4853f3dc-39f5-44dd-aeed-f06f1f485b26",
+        "name": "Notatka 6",
+        "status": "IN_PROGRESS",
+        "taskId": "8f4d3d5f-71cf-4b7e-8f53-7e09c8d6c73f",
+        "evaluation": 10,
+        "content": "Jakas notatka",
+        "playerNumber": 222,
+        "teamId": "002e573c-3a98-4ed8-8bb6-e3a178b9731f",
+        "createdAt": "2025-01-06T17:01:36.000Z",
+        "updatedAt": "2025-01-08T16:28:41.000Z",
+        "createdById": "0a1868a7-cc98-4b57-8807-2c7f8e556c1b",
+        "team": {
+            "id": "002e573c-3a98-4ed8-8bb6-e3a178b9731f",
+            "name": "Lech Poznan",
+            "league": null,
+            "city": null,
+            "country": null,
+            "createdAt": "2025-01-06T16:58:12.000Z",
+            "updatedAt": "2025-01-06T16:58:12.000Z"
+        }
+    },
+    {
+        "id": "53621606-0e30-4b27-ae77-ec0445e454b1",
+        "name": "Notatka 7",
+        "status": "COMPLETED",
+        "taskId": "8f4d3d5f-71cf-4b7e-8f53-7e09c8d6c73f",
+        "evaluation": 10,
+        "content": null,
+        "playerNumber": 333,
+        "teamId": null,
+        "createdAt": "2025-01-08T15:54:10.000Z",
+        "updatedAt": "2025-01-08T15:54:15.000Z",
+        "createdById": "0a1868a7-cc98-4b57-8807-2c7f8e556c1b",
+        "team": null
+    },
+    {
+        "id": "692b678d-ba81-4b7d-8d17-5aac71aee80e",
+        "name": "Notatka #5",
+        "status": "COMPLETED",
+        "taskId": "8f4d3d5f-71cf-4b7e-8f53-7e09c8d6c73f",
+        "evaluation": 2,
+        "content": "To jest notatka #5",
+        "playerNumber": 222,
+        "teamId": "002e573c-3a98-4ed8-8bb6-e3a178b9731f",
+        "createdAt": "2025-01-06T16:58:13.000Z",
+        "updatedAt": "2025-01-06T16:58:13.000Z",
+        "createdById": null,
+        "team": {
+            "id": "002e573c-3a98-4ed8-8bb6-e3a178b9731f",
+            "name": "Lech Poznan",
+            "league": null,
+            "city": null,
+            "country": null,
+            "createdAt": "2025-01-06T16:58:12.000Z",
+            "updatedAt": "2025-01-06T16:58:12.000Z"
+        }
+    },
+    {
+        "id": "89bca610-c842-42d6-892c-e9ecfea85760",
+        "name": "Notatka #2",
+        "status": "COMPLETED",
+        "taskId": "8f4d3d5f-71cf-4b7e-8f53-7e09c8d6c73f",
+        "evaluation": 9,
+        "content": "To jest notatka #2",
+        "playerNumber": 333,
+        "teamId": "de81af74-1f4a-4b87-9b90-e975af472577",
+        "createdAt": "2025-01-06T16:58:13.000Z",
+        "updatedAt": "2025-01-06T16:58:13.000Z",
+        "createdById": null,
+        "team": {
+            "id": "de81af74-1f4a-4b87-9b90-e975af472577",
+            "name": "Barcelona",
+            "league": null,
+            "city": null,
+            "country": null,
+            "createdAt": "2025-01-06T16:58:12.000Z",
+            "updatedAt": "2025-01-06T16:58:12.000Z"
+        }
+    }
+]
+"""
+
 
 # def test_filter_reports():
 #     with mock.patch("requests.get") as mocked_get:
@@ -978,6 +1063,28 @@ def test_analyze_with_avg():
         # )
         # assert response.status_code == 200
         # assert response.text == "[]"
+
+
+def test_analyze_notes():
+    with mock.patch("requests.get") as mocked_get:
+        get = mock.MagicMock()
+        get.text = example_notes
+        get.status_code = 200
+        mocked_get.return_value = get
+
+        response = client.post(
+            "/analyze/",
+            json={
+                "type": "note",
+            },
+        )
+        assert response.status_code == 200
+        answer = response.json()
+        players = set(report["playerNumber"] for report in answer)
+        assert players == {
+            222,
+            333,
+        }
 
 
 example_reports_to_sort = """
