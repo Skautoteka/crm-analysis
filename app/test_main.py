@@ -1139,7 +1139,22 @@ def test_analyze_notes():
         )
         assert response.status_code == 200
         answer = response.json()
-        players = set(report["playerNumber"] for report in answer)
+        players = set(note["playerNumber"] for note in answer)
+        assert players == {
+            222,
+            333,
+        }
+
+        response = client.post(
+            "/analyze/",
+            json={
+                "type": "note",
+                "filters": [],
+            },
+        )
+        assert response.status_code == 200
+        answer = response.json()
+        players = set(note["playerNumber"] for note in answer)
         assert players == {
             222,
             333,
