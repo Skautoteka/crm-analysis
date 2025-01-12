@@ -315,13 +315,20 @@ def analyze(
                         KeyEnum.heading,
                         KeyEnum.physical_strength,
                     ]:
+                        try:
+                            value = int(request_filter.value)
+                        except ValueError:
+                            raise HTTPException(
+                                status_code=502,
+                                detail=f"value in filter is not int: {request_filter.value}",
+                            )
                         query &= (
                             pl.col("traits").struct.field("traitId")
                             == request_filter.key.upper()
                         ) & (
                             getattr(operator, request_filter.predicate)(
                                 pl.col("traits").struct.field("value"),
-                                int(request_filter.value),
+                                value,
                             )
                         )
                     else:
@@ -351,6 +358,13 @@ def analyze(
                     PredicateEnum.avg_ne,
                 ]:
                     continue
+                try:
+                    value = int(request_filter.value)
+                except ValueError:
+                    raise HTTPException(
+                        status_code=502,
+                        detail=f"value in filter is not int: {request_filter.value}",
+                    )
                 ids_set &= set(
                     df.filter(pl.col("id").is_in(ids))
                     .explode("traits")
@@ -368,7 +382,7 @@ def analyze(
                             ],
                         )(
                             pl.col("value"),
-                            int(request_filter.value),
+                            value,
                         )
                     )
                     .explode("id")
@@ -398,6 +412,13 @@ def analyze(
         ids_set = set(ids.to_dict()["id"])
         if analyze_request.filters is not None:
             for request_filter in analyze_request.filters:
+                try:
+                    value = int(request_filter.value)
+                except ValueError as err:
+                    raise HTTPException(
+                        status_code=502,
+                        detail=f"value in filter is not int: {request_filter.value}",
+                    ) from err
                 ids_set &= set(
                     df.filter(pl.col("id").is_in(ids))
                     .group_by("playerNumber")
@@ -410,7 +431,7 @@ def analyze(
                             ],
                         )(
                             pl.col(request_filter.key),
-                            int(request_filter.value),
+                            value,
                         )
                     )
                     .explode("id")
