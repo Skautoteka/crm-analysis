@@ -855,6 +855,26 @@ def test_analyze_filters():
             "4b4b4076-c6aa-4601-841e-ba51f7e60c32",
         }
 
+        response = client.post(
+            "/analyze/",
+            json={
+                "type": "report",
+                "filters": [
+                    {
+                        "key": "playerId",
+                        "predicate": "eq",
+                        "value": "4b4b4076-c6aa-4601-841e-ba51f7e60c32",
+                    },
+                ],
+            },
+        )
+        assert response.status_code == 200
+        answer = response.json()
+        players = set(report["playerId"] for report in answer)
+        assert players == {
+            "4b4b4076-c6aa-4601-841e-ba51f7e60c32",
+        }
+
 
 def test_analyze_with_avg():
     with mock.patch("requests.get") as mocked_get:
