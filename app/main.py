@@ -227,6 +227,15 @@ def analyze(
         except (requests.ConnectionError, requests.Timeout) as err:
             raise HTTPException(status_code=502, detail=str(err)) from err
 
+    if response.status_code != 200:
+        raise HTTPException(
+            status_code=502,
+            detail=f"Status code of response is not OK: {response.status_code}",
+        )
+
+    if response.text == "":
+        raise HTTPException(status_code=502, detail="Empty response")
+
     try:
         response_json = response.json()
     except json.JSONDecodeError as err:
