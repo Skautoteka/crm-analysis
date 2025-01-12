@@ -1029,6 +1029,34 @@ def test_analyze_with_avg():
             "28228bad-4d09-4773-8aeb-73938a2456c2",
         }
 
+        response = client.post(
+            "/analyze/",
+            json={
+                "type": "report",
+                "filters": [
+                    {"key": "finishing", "predicate": "eq", "value": "20"}
+                ],
+            },
+        )
+        assert response.status_code == 200
+        answer = response.json()
+        players = set(report["playerId"] for report in answer)
+        assert players == set([])
+
+        response = client.post(
+            "/analyze/",
+            json={
+                "type": "report",
+                "filters": [
+                    {"key": "finishing", "predicate": "lt", "value": "20"}
+                ],
+            },
+        )
+        assert response.status_code == 200
+        answer = response.json()
+        players = set(report["playerId"] for report in answer)
+        assert players == set([])
+
         #
         # response = client.post(
         #     "/mean/",

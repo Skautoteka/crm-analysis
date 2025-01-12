@@ -338,7 +338,7 @@ def analyze(
                     PredicateEnum.avg_ne,
                 ]:
                     continue
-        ids = df.filter(query).select("id")
+        ids = df.explode("traits").filter(query).select("id")
         ids_set = set(ids.to_dict()["id"])
         if analyze_request.filters is not None:
             for request_filter in analyze_request.filters:
