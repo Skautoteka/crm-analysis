@@ -227,6 +227,18 @@ def analyze(
         except (requests.ConnectionError, requests.Timeout) as err:
             raise HTTPException(status_code=502, detail=str(err)) from err
 
+    try:
+        response_json = response.json()
+    except json.JSONDecodeError as err:
+        raise HTTPException(status_code=502, detail=str(err)) from err
+    if "errorStatus" in response_json:
+        if "message" in response_json:
+            raise HTTPException(
+                status_code=502, detail=response_json["message"]
+            )
+        else:
+            raise HTTPException(status_code=502, detail=response.text)
+
     df = pl.read_json(StringIO(response.text))
 
     # Find reports matching filters
