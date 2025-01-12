@@ -1034,6 +1034,17 @@ def test_analyze_with_avg():
             json={
                 "type": "report",
                 "filters": [
+                    {"key": "finishing", "predicate": "eq", "value": "twenty"}
+                ],
+            },
+        )
+        assert response.status_code == 502
+
+        response = client.post(
+            "/analyze/",
+            json={
+                "type": "report",
+                "filters": [
                     {"key": "finishing", "predicate": "eq", "value": "20"}
                 ],
             },
