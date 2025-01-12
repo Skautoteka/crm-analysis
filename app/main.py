@@ -492,18 +492,21 @@ def analyze(
                 )
             ).to_list()
             for player in latest_times:
-                latest_value = pl.Series(
-                    df.explode("traits")
-                    .filter(
-                        (pl.col("playerId") == player["playerId"])
-                        & (pl.col("traits").struct.field("traitId") == key)
-                        & (
-                            pl.col("traits").struct.field("updatedAt")
-                            == player["updatedAt"]
+                try:
+                    latest_value = pl.Series(
+                        df.explode("traits")
+                        .filter(
+                            (pl.col("playerId") == player["playerId"])
+                            & (pl.col("traits").struct.field("traitId") == key)
+                            & (
+                                pl.col("traits").struct.field("updatedAt")
+                                == player["updatedAt"]
+                            )
                         )
-                    )
-                    .select(pl.col("traits").struct.field("value"))
-                ).to_list()[0]
+                        .select(pl.col("traits").struct.field("value"))
+                    ).to_list()[0]
+                except IndexError:
+                    continue
                 for i, content_player in enumerate(content):
                     if content_player["playerId"] != player["playerId"]:
                         continue
@@ -538,12 +541,15 @@ def analyze(
             )
         ).to_list()
         for player in latest_times:
-            latest_value = pl.Series(
-                df.filter(
-                    (pl.col("playerNumber") == player["playerNumber"])
-                    & (pl.col("updatedAt") == player["updatedAt"])
-                ).select(pl.col("evaluation"))
-            ).to_list()[0]
+            try:
+                latest_value = pl.Series(
+                    df.filter(
+                        (pl.col("playerNumber") == player["playerNumber"])
+                        & (pl.col("updatedAt") == player["updatedAt"])
+                    ).select(pl.col("evaluation"))
+                ).to_list()[0]
+            except IndexError:
+                continue
             for i, content_player in enumerate(content):
                 if content_player["playerNumber"] != player["playerNumber"]:
                     continue
