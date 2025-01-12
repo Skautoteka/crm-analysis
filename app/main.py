@@ -255,6 +255,28 @@ def analyze(
     # Find reports matching filters
     query = True
     if analyze_request.type == TypeEnum.report:
+        # Report has to contain id, playerId, and traits has to contain traitId and value.
+        try:
+            _ = df.select(
+                "id",
+                "playerId",
+                "traits",
+            )
+        except pl.exceptions.ColumnNotFoundError as err:
+            raise HTTPException(
+                status_code=502,
+                detail="Fields: id, playerId, or traits not in report",
+            ) from err
+        try:
+            _ = df.explode("traits").select(
+                pl.col("traits").struct.field("traitId", "value")
+            )
+        except pl.exceptions.StructFieldNotFoundError as err:
+            raise HTTPException(
+                status_code=502,
+                detail="Fields: traitId, or value not in report traits",
+            ) from err
+
         if analyze_request.filters is not None:
             for request_filter in analyze_request.filters:
                 if request_filter.predicate in [
@@ -316,10 +338,7 @@ def analyze(
                     PredicateEnum.avg_ne,
                 ]:
                     continue
-        try:
-            ids = df.filter(query).select("id")
-        except pl.exceptions.ColumnNotFoundError as err:
-            raise HTTPException(status_code=502, detail=str(err)) from err
+        ids = df.filter(query).select("id")
         ids_set = set(ids.to_dict()["id"])
         if analyze_request.filters is not None:
             for request_filter in analyze_request.filters:
@@ -357,15 +376,25 @@ def analyze(
                     .to_dict()["id"]
                 )
     else:
+        # Note has to contain id, playerNumber and evaluation.
+        try:
+            _ = df.select(
+                "id",
+                "playerNumber",
+                "evaluation",
+            )
+        except pl.exceptions.ColumnNotFoundError as err:
+            raise HTTPException(
+                status_code=502,
+                detail="Fields: id, playerNumber, or evaluation not in note",
+            ) from err
+
         if analyze_request.filters is not None:
             for request_filter in analyze_request.filters:
                 query &= getattr(operator, request_filter.predicate)(
                     pl.col(request_filter.key), request_filter.value
                 )
-        try:
-            ids = df.filter(query).select("id")
-        except pl.exceptions.ColumnNotFoundError as err:
-            raise HTTPException(status_code=502, detail=str(err)) from err
+        ids = df.filter(query).select("id")
         ids_set = set(ids.to_dict()["id"])
         if analyze_request.filters is not None:
             for request_filter in analyze_request.filters:
