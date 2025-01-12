@@ -408,6 +408,7 @@ def analyze(
                 query &= getattr(operator, request_filter.predicate)(
                     pl.col(request_filter.key), request_filter.value
                 )
+        query &= pl.col("playerNumber").is_not_null()
         ids = df.filter(query).select("id")
         ids_set = set(ids.to_dict()["id"])
         if analyze_request.filters is not None:
@@ -541,6 +542,8 @@ def analyze(
             )
         ).to_list()
         for player in latest_times:
+            if player["playerNumber"] is None:
+                continue
             try:
                 latest_value = pl.Series(
                     df.filter(
