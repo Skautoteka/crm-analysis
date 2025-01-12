@@ -316,7 +316,10 @@ def analyze(
                     PredicateEnum.avg_ne,
                 ]:
                     continue
-        ids = df.filter(query).select("id")
+        try:
+            ids = df.filter(query).select("id")
+        except pl.exceptions.ColumnNotFoundError as err:
+            raise HTTPException(status_code=502, detail=str(err)) from err
         ids_set = set(ids.to_dict()["id"])
         if analyze_request.filters is not None:
             for request_filter in analyze_request.filters:
@@ -359,7 +362,10 @@ def analyze(
                 query &= getattr(operator, request_filter.predicate)(
                     pl.col(request_filter.key), request_filter.value
                 )
-        ids = df.filter(query).select("id")
+        try:
+            ids = df.filter(query).select("id")
+        except pl.exceptions.ColumnNotFoundError as err:
+            raise HTTPException(status_code=502, detail=str(err)) from err
         ids_set = set(ids.to_dict()["id"])
         if analyze_request.filters is not None:
             for request_filter in analyze_request.filters:
