@@ -406,13 +406,15 @@ def analyze(
 
         if analyze_request.filters is not None:
             for request_filter in analyze_request.filters:
-                try:
-                    value = int(request_filter.value)
-                except ValueError as err:
-                    raise HTTPException(
-                        status_code=502,
-                        detail=f"value in filter is not int: {request_filter.value}",
-                    ) from err
+                value = request_filter.value
+                if request_filter.key == KeyEnum.evaluation:
+                    try:
+                        value = int(request_filter.value)
+                    except ValueError as err:
+                        raise HTTPException(
+                            status_code=502,
+                            detail=f"value in filter is not int: {request_filter.value}",
+                        ) from err
                 query &= getattr(operator, request_filter.predicate)(
                     pl.col(request_filter.key), value
                 )
@@ -421,13 +423,24 @@ def analyze(
         ids_set = set(ids.to_dict()["id"])
         if analyze_request.filters is not None:
             for request_filter in analyze_request.filters:
-                try:
-                    value = int(request_filter.value)
-                except ValueError as err:
-                    raise HTTPException(
-                        status_code=502,
-                        detail=f"value in filter is not int: {request_filter.value}",
-                    ) from err
+                if request_filter.predicate not in [
+                    PredicateEnum.avg_ge,
+                    PredicateEnum.avg_gt,
+                    PredicateEnum.avg_le,
+                    PredicateEnum.avg_lt,
+                    PredicateEnum.avg_eq,
+                    PredicateEnum.avg_ne,
+                ]:
+                    continue
+                value = request_filter.value
+                if request_filter.key == KeyEnum.evaluation:
+                    try:
+                        value = int(request_filter.value)
+                    except ValueError as err:
+                        raise HTTPException(
+                            status_code=502,
+                            detail=f"value in filter is not int: {request_filter.value}",
+                        ) from err
                 ids_set &= set(
                     df.filter(pl.col("id").is_in(ids))
                     .group_by("playerNumber")
