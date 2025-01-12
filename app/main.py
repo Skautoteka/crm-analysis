@@ -42,6 +42,7 @@ class KeyEnum(str, Enum):
     player_number = "player_number"
     player_id = "playerId"
     region_id = "regionId"
+    team_id = "teamId"
     position = "position"
     sex = "sex"
     report_name = "report_name"
