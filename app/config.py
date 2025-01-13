@@ -1,7 +1,9 @@
 from pydantic_settings import BaseSettings, SettingsConfigDict
+import os
 
 
 class Settings(BaseSettings):
-    backend_url: str = "http://localhost:3000/api/"
+    hostname: str = os.environ.get("HOSTNAME", "localhost")
+    backend_url: str = f"http://{hostname}:3000/api/"
 
     model_config = SettingsConfigDict(env_file=".env")
