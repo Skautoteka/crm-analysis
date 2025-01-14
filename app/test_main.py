@@ -961,6 +961,26 @@ def test_analyze_filters():
         }
 
 
+def test_analyze_filters_with_empty_reports():
+    with mock.patch("requests.get") as mocked_get:
+        get = mock.MagicMock()
+        get.text = "[]"
+        get.json = lambda: []
+        get.status_code = 200
+        mocked_get.return_value = get
+
+        response = client.post(
+            "/analyze/",
+            json={
+                "type": "report",
+            },
+        )
+        assert response.status_code == 200
+        answer = response.json()
+        players = set(report["playerId"] for report in answer)
+        assert players == set([])
+
+
 def test_analyze_with_avg():
     with mock.patch("requests.get") as mocked_get:
         get = mock.MagicMock()

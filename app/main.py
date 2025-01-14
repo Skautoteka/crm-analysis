@@ -251,6 +251,12 @@ def analyze(
         else:
             raise HTTPException(status_code=502, detail=response.text)
 
+    if response_json == []:
+        return responses.Response(
+            content=json.dumps([]),
+            media_type="application/json",
+        )
+
     df = pl.read_json(StringIO(response.text))
 
     # Find reports matching filters
