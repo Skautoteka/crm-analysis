@@ -46,13 +46,40 @@ class KeyEnum(str, Enum):
     position = "position"
     sex = "sex"
     report_name = "report_name"
+
     reflex = "reflex"
+    physical_strength = "physical_strength"
     speed = "speed"
     interceptions = "interceptions"
+    versatility = "versatility"
+    creativity = "creativity"
     finishing = "finishing"
-    stamina = "stamina"
+    positioning = "positioning"
     heading = "heading"
-    physical_strength = "physical_strength"
+    conditioning = "conditioning"
+    stamina = "stamina"
+    ball_control = "ball_control"
+    passing = "passing"
+    dribbling = "dribling"
+    flexibility = "flexibility"
+    line_play = "line_play"
+    anticipation = "anticipation"
+    one_on_one = "one_on_one"
+    crossing = "crossing"
+    playmaking = "playmaking"
+    shot_accuracy = "shot_accuracy"
+    playing_with_feet = "playing_with_feet"
+    tackling = "tackling"
+    throw_ins = "throw_ins"
+    balance = "balance"
+    game_vision = "game_vision"
+    communication = "communication"
+    offensive_support = "offensive_support"
+    defensive_skills = "defensive_skills"
+    responsibility = "responsibility"
+    defensive_support = "defensive_support"
+    off_ball_movement = "off_ball_movement"
+
     evaluation = "evaluation"
 
 
@@ -314,14 +341,13 @@ def analyze(
                             request_filter.value,
                         )
                     elif request_filter.key in [
-                        KeyEnum.reflex,
-                        KeyEnum.speed,
-                        KeyEnum.interceptions,
-                        KeyEnum.finishing,
-                        KeyEnum.stamina,
-                        KeyEnum.heading,
-                        KeyEnum.physical_strength,
+                        KeyEnum.player_id,
+                        KeyEnum.region_id,
                     ]:
+                        query &= getattr(operator, request_filter.predicate)(
+                            pl.col(request_filter.key), request_filter.value
+                        )
+                    else:
                         try:
                             value = int(request_filter.value)
                         except ValueError:
@@ -337,10 +363,6 @@ def analyze(
                                 pl.col("traits").struct.field("value"),
                                 value,
                             )
-                        )
-                    else:
-                        query &= getattr(operator, request_filter.predicate)(
-                            pl.col(request_filter.key), request_filter.value
                         )
                     # TODO: errors
                 elif request_filter.predicate in [
