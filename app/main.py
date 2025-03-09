@@ -434,18 +434,26 @@ def analyze(
 
         if analyze_request.filters is not None:
             for request_filter in analyze_request.filters:
-                value = request_filter.value
-                if request_filter.key == KeyEnum.evaluation:
-                    try:
-                        value = int(request_filter.value)
-                    except ValueError as err:
-                        raise HTTPException(
-                            status_code=502,
-                            detail=f"value in filter is not int: {request_filter.value}",
-                        ) from err
-                query &= getattr(operator, request_filter.predicate)(
-                    pl.col(request_filter.key), value
-                )
+                if request_filter.predicate in [
+                    PredicateEnum.ge,
+                    PredicateEnum.gt,
+                    PredicateEnum.le,
+                    PredicateEnum.lt,
+                    PredicateEnum.eq,
+                    PredicateEnum.ne,
+                ]:
+                    value = request_filter.value
+                    if request_filter.key == KeyEnum.evaluation:
+                        try:
+                            value = int(request_filter.value)
+                        except ValueError as err:
+                            raise HTTPException(
+                                status_code=502,
+                                detail=f"value in filter is not int: {request_filter.value}",
+                            ) from err
+                    query &= getattr(operator, request_filter.predicate)(
+                        pl.col(request_filter.key), value
+                    )
         query &= pl.col("playerNumber").is_not_null()
         ids = df.filter(query).select("id")
         ids_set = set(ids.to_dict()["id"])
