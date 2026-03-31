@@ -8,7 +8,7 @@ dependencies = [
     "fastapi[standard]==0.120.4",
     "polars==1.19.0",
     "pydantic-settings==2.7.1",
-    "requests==2.32.4",
+    "requests==2.33.0",
 ]
 
 [project.optional-dependencies]
