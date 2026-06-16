@@ -17,7 +17,7 @@ development = [
 ]
 
 testing = [
-    "httpx==0.28.1",
+    "httpx2==2.4.0",
     "pytest==9.0.3",
 ]
 
